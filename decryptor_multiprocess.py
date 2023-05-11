@@ -92,11 +92,11 @@ def customPRF512(key, A, B):
     return R[:blen]
 
 
-def try_password(password, essid, key_data, payload, mic):
+def try_password(password, essid, key_data, payload, mic, length):
     pwd = ''.join(password[1]) + 'xY3aOIq'
     if password[0] % 200 == 0:
-        print(pwd)
-        print("-----")
+        print(f"Done {int(password[0] / length * 100): <2} % || {pwd}")
+        print("--------------------------")
     pmk = pbkdf2_hmac('sha1', pwd.encode(), essid.encode(), 4096, 32)
     ptk = customPRF512(pmk, b"Pairwise key expansion", key_data)
     # _mic = hmac.new(_ptk[0:16], payload, md5).hexdigest()
@@ -109,12 +109,12 @@ def try_password(password, essid, key_data, payload, mic):
     return None
 
 
-def main():
+def main_app(essid, file_with_packets):
     cpu_num = os.cpu_count()
-    print('Число процессов: ', cpu_num)
-    packets = rdpcap('shake.pcap')
+    print(' * Number of CPUs: ', cpu_num, '\n')
+    packets = rdpcap(file_with_packets)
     handshakes = [0, 0, 0, 0]
-    essid = 'RT-WiFi-15C2'
+    essid = essid
     bssid = ''
     cl = ''
 
@@ -123,29 +123,29 @@ def main():
     NUMBERS = '0123456789'
     CUSTOM = 'abcdef'
 
-    characters = CUSTOM
-    rep = 5
-    length = len(characters)**rep
-    print(f"Будет сгенирировано {length} слов.")
+    characters = CUSTOM            # The characters of the password
+    rep = 5                        # The length of the password
+    length = len(characters)**rep  # The numbers of passwords to be generated
+
+    print(f" * {length} passwords will be generated\n")
 
     words = product(characters, repeat=rep)
     passwords = []
     for i, pwd in enumerate(words):
         passwords.append((i, pwd))
-    print("Список паролей успешно обработан!")
     passwords = tuple(passwords)
-    print(type(passwords))
 
     for pkt in packets:
         bssid, cl = check(pkt, handshakes, bssid, cl)
 
     if all(handshakes):
-        print("Пакеты успешно прошли проверку!\n")
+        print(" * The packets were successfully checked\n")
 
     key_data, mic, payload = organize(bssid, cl, handshakes)
 
     loop_func = partial(try_password, essid=essid,
-                        key_data=key_data, payload=payload, mic=mic)
+                        key_data=key_data, payload=payload,
+                        mic=mic, length=length)
 
     start = time()
     pool = Pool(processes=cpu_num)
@@ -154,15 +154,15 @@ def main():
         for result in pool.imap_unordered(loop_func, passwords):
             if result:
                 results.append(result)
-                pool.terminate()  # Прерывание выполнения пула процессов
+                pool.terminate()
                 break
     finally:
         pool.close()
         pool.join()
 
     end = time() - start
-    print(f"Это заняло {int(end)} секунд")
+    print(f"It has taken {int(end)} seconds")
 
 
 if __name__ == "__main__":
-    main()
+    main_app("My_ESSID", "shake.pcap")
