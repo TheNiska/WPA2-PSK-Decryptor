@@ -18,7 +18,7 @@ from hmac import new
 from itertools import product
 from functools import partial
 from time import time
-import os
+from os import cpu_count
 from multiprocessing import Pool
 
 
@@ -93,16 +93,14 @@ def customPRF512(key, A, B):
 
 
 def try_password(password, essid, key_data, payload, mic, length):
-    pwd = ''.join(password[1]) + 'xY3aOIq'
-    if password[0] % 200 == 0:
+    pwd = ''.join(password[1])
+    if password[0] % 400 == 0:
         print(f"Done {int(password[0] / length * 100): <2} % || {pwd}")
         print("--------------------------")
     pmk = pbkdf2_hmac('sha1', pwd.encode(), essid.encode(), 4096, 32)
     ptk = customPRF512(pmk, b"Pairwise key expansion", key_data)
-    # _mic = hmac.new(_ptk[0:16], payload, md5).hexdigest()
     _mic_ = new(ptk[0:16], payload, sha1).hexdigest()[:32]
     _mic_ = _mic_.encode()
-    # if mic == mic or mic == _mic_
     if mic == _mic_:
         print('Пароль найден: ', pwd)
         return pwd
@@ -110,7 +108,7 @@ def try_password(password, essid, key_data, payload, mic, length):
 
 
 def main_app(essid, file_with_packets):
-    cpu_num = os.cpu_count()
+    cpu_num = cpu_count()
     print(' * Number of CPUs: ', cpu_num, '\n')
     packets = rdpcap(file_with_packets)
     handshakes = [0, 0, 0, 0]
