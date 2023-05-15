@@ -19,7 +19,6 @@ import os
 
 
 def check(pkt, handshakes, bssid, cl):
-    # Проверяем все ли пакеты на месте
     fNONCE = b'00'*32
     fMIC = b'00'*16
 
@@ -56,7 +55,6 @@ def check(pkt, handshakes, bssid, cl):
 
 
 def organize(bssid, cl, handshakes):
-    # Все нижеприведенный переменные принадлежат к классу 'bytes'
     __NULL_ = b"\x00"
     bssid = a2b_hex(bssid.replace(':', '').lower())
     cl = a2b_hex(cl.replace(':', '').lower())
@@ -89,7 +87,7 @@ def customPRF512(key, A, B):
 
 
 def main():
-    print('Число процессов: ', os.cpu_count())
+    print('Number of CPUs: ', os.cpu_count())
 
     packets = rdpcap('shake.pcap')
     handshakes = [0, 0, 0, 0]
@@ -105,7 +103,7 @@ def main():
     characters = CUSTOM
     rep = 5
     length = len(characters)**rep
-    print(f"Будет сгенирировано {length} слов.")
+    print(f"{length} passwords will be generated")
 
     passwords = product(characters, repeat=rep)
 
@@ -113,7 +111,7 @@ def main():
         bssid, cl = check(pkt, handshakes, bssid, cl)
 
     if all(handshakes):
-        print("Пакеты успешно прошли проверку!\n")
+        print("The packets were successfully checked!\n")
 
     key_data, mic, payload = organize(bssid, cl, handshakes)
 
@@ -134,12 +132,12 @@ def main():
         _mic_ = _mic_.encode()
         # if mic == mic or mic == _mic_
         if mic == _mic_:
-            print('Пароль найден: ', password)
+            print('The password has been found: ' , password)
             print(i)
             break
 
     end = time() - start
-    print(f"Это заняло {int(end)} секунд")
+    print(f"It has taken {end} seconds!")
 
 
 if __name__ == "__main__":

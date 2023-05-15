@@ -23,7 +23,6 @@ from multiprocessing import Pool
 
 
 def check(pkt, handshakes, bssid, cl):
-    # Проверяем все ли пакеты на месте
     fNONCE = b'00'*32
     fMIC = b'00'*16
 
@@ -60,7 +59,6 @@ def check(pkt, handshakes, bssid, cl):
 
 
 def organize(bssid, cl, handshakes):
-    # Все нижеприведенный переменные принадлежат к классу 'bytes'
     __NULL_ = b"\x00"
     bssid = a2b_hex(bssid.replace(':', '').lower())
     cl = a2b_hex(cl.replace(':', '').lower())
@@ -102,12 +100,12 @@ def try_password(password, essid, key_data, payload, mic, length):
     _mic_ = new(ptk[0:16], payload, sha1).hexdigest()[:32]
     _mic_ = _mic_.encode()
     if mic == _mic_:
-        print('Пароль найден: ', pwd)
+        print('Password has been found: ', pwd)
         return pwd
     return None
 
 
-def main_app(essid, file_with_packets):
+def main_app(essid, file_with_packets, chars=None, l=None):
     cpu_num = cpu_count()
     print(' * Number of CPUs: ', cpu_num, '\n')
     packets = rdpcap(file_with_packets)
@@ -116,13 +114,19 @@ def main_app(essid, file_with_packets):
     bssid = ''
     cl = ''
 
+
     LATIN_LOWER = 'abcdefghijklmnopqrstuvwxyz'
     LATIN_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     NUMBERS = '0123456789'
     CUSTOM = 'abcdef'
 
-    characters = CUSTOM            # The characters of the password
-    rep = 5                        # The length of the password
+    if chars is not None and l is not None:
+        characters = chars
+        rep = l
+    else:
+        characters = CUSTOM            # The characters of the password
+        rep = 5                        # The length of the password
+    
     length = len(characters)**rep  # The numbers of passwords to be generated
 
     print(f" * {length} passwords will be generated\n")
