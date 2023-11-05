@@ -1,16 +1,4 @@
 # -*- coding: utf-8 -*-
-'''
-Алфавит : 'abcdef'
-Длина пароля: 5
-Результаты:
-    мой ноутбук[cpu_num]   -> 53s, 50s, 57s, 53s
-    мой ноутбук[cpu_num*2] -> 52s, 55s
-    --------------------
-    Kaggle CPU[cpu_num]    -> 9s, 9s
-    Kaggle CPU[cpu_num*2]  -> 9s, 9s
-
-'''
-
 from scapy.all import rdpcap, EAPOL, Dot11, Raw
 from binascii import hexlify, a2b_hex
 from hashlib import pbkdf2_hmac, sha1
@@ -114,7 +102,6 @@ def main_app(essid, file_with_packets, chars=None, l=None):
     bssid = ''
     cl = ''
 
-
     LATIN_LOWER = 'abcdefghijklmnopqrstuvwxyz'
     LATIN_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     NUMBERS = '0123456789'
@@ -126,7 +113,7 @@ def main_app(essid, file_with_packets, chars=None, l=None):
     else:
         characters = CUSTOM            # The characters of the password
         rep = 5                        # The length of the password
-    
+
     length = len(characters)**rep  # The numbers of passwords to be generated
 
     print(f" * {length} passwords will be generated\n")

