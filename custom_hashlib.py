@@ -1,5 +1,5 @@
 from hashlib import sha1
-
+import numpy as np
 
 '''
 Cryptographic hash func. In the future must we be written from scratch
@@ -7,11 +7,82 @@ Cryptographic hash func. In the future must we be written from scratch
 hash_func = sha1
 # Should be replaces with custom: hash_func = lambda bytes -> hash
 
+K_0_19 = bytes_to_bits(b"\x5A\x82\x79\x99")
+K_20_39 = bytes_to_bits(b"\x6E\xD9\xEB\xA1")
+K_40_59 = bytes_to_bits(b"\x8F\x1B\xBC\xDC")
+K_60_79 = bytes_to_bits(b"\xCA\x62\xC1\xD6")
+
+H0 = bytes_to_bits(b"\x67\x45\x23\x01")
+H1 = bytes_to_bits(b"\xEF\xCD\xAB\x89")
+H2 = bytes_to_bits(b"\x98\xBA\xDC\xFE")
+H3 = bytes_to_bits(b"\x10\x32\x54\x76")
+H4 = bytes_to_bits(b"\xC3\xD2\xE1\xF0")
+
+K_map = dict()
+func_map = dict()
+
+for t in range(80):
+    if t <= 19:
+        func = np.logical_or(
+            np.logical_and(B, C),
+            np.logical_and(np.logical_not(B), D)
+        )
+
+        func_map[t] = func
+        K_map[t] = K_0_19
+
+    elif 20 <= t <= 39:
+        func = np.logical_xor(
+            np.logical_xor(B, C),
+            D
+        )
+
+        func_map[t] = func
+        K_map = K_20_39
+
+    elif 40 <= t <= 59:
+        func = np.logical_or(
+            np.logical_or(
+                np.logical_and(B, C),
+                np.logical_and(B, D)
+            ),
+            np.logical_and(C, D)
+        )
+
+        func_map[t] = func
+        K_map[t] = K_40_59
+
+    else:
+        func = np.logical_xor(
+            np.logical_xor(B, C),
+            D
+        )
+        func_map[t] = func
+        K_map[t] = K_60_79
+
 
 def bytes_xor(string: bytes, pad: int) -> bytes:
     return b''.join(
         [(byte ^ pad).to_bytes(1) for byte in string]
     )
+
+
+def byte_to_bin_string(byte: int) -> str:
+    bit_str = bin(byte)[2:]
+    length = len(bit_str)
+    return bit_str if length == 8 else (8 - length) * '0' + bit_str
+
+
+def bytes_to_bits(byte_string: bytes) -> np.array:
+    bits_len = len(byte_string) * 8
+    arr = np.zeros((bits_len,), dtype=np.bool_)
+    current = 0
+    for byte in byte_string:
+        bits = byte_to_bin_string(byte)
+        bits_list = [int(ch) for ch in bits]
+        arr[current:current+8] = bits_list
+        current += 8
+    return arr
 
 
 def words_sum(X, Y):
@@ -37,6 +108,16 @@ def circ_left_shit(X: bytes, n: int):
     x = int.from_bytes(X)
     shifted = (x << n) or (x >> (32 - n))
     return shifted.to_bytes(4)
+
+
+def circ_left_shift_arr(arr, n):
+    length = arr.shape[0]
+    temp_arr = np.zeros((2, length), dtype=np.bool_)
+
+    temp_arr[0, :length - n] = arr[n:]  # shift left
+    temp_arr[1, 32 - n:] = arr[:length - (32 - n)]  # shift right
+
+    return np.logical_or(temp_arr[0,], temp_arr[1,])
 
 
 def sha1_pad(msg: bytes) -> bytes:
@@ -88,9 +169,13 @@ def main_sha1(msg: bytes):
 
     '''
     msg = sha1_pad(msg)
-    blocks = []
-    for i in range(len(msg) // 64):
-        blocks.append(msg[i:i+64])
+    length = len(msg) // 64
+    blocks = np.zeros((length, 512), dtype=np.bool_)
+    for i in range(length):
+        blocks[i, :] = bytes_to_bits(msg[i*64:i*64+64])[:]
+
+    print(blocks)
+    print(blocks.shape)
 
     '''
     f_0_19 = (B and C) or ((not B) and D)
@@ -99,47 +184,35 @@ def main_sha1(msg: bytes):
     f_60_79 = B ^ C ^ D
     '''
 
-    K_0_19 = b"\x5A\x82\x79\x99"
-    K_20_39 = b"\x6E\xD9\xEB\xA1"
-    K_40_59 = b"\x8F\x1B\xBC\xDC"
-    K_60_79 = b"\xCA\x62\xC1\xD6"
 
-    H0 = b"\x67\x45\x23\x01"
-    H1 = b"\xEF\xCD\xAB\x89"
-    H2 = b"\x98\xBA\xDC\xFE"
-    H3 = b"\x10\x32\x54\x76"
-    H4 = b"\xC3\xD2\xE1\xF0"
+    return
 
-    for block in blocks:
-        words = [block[i*4:i*4+4] for i in range(16)]
-        words.extend([b''] * 64)
-        print(words)
-        print(len(words))
+    for i in range(blocks.shape[0]):
+        # now we have 512 len block
+        words = np.zeros((80, 32), dtype=np.bool_)
+
+        for j in range(16):
+            words[j,] = blocks[i, j*32:j*32+32]
 
         for t in range(16, 80):
-            words[t] = circ_left_shit(
-                words[t-3] ^ words[t-8] ^ words[t-14] ^ words[t-16],
-                1
+            xored = np.logical_xor(
+                np.logical_xor(words[t-3,], words[t-8,]),
+                np.logical_xor(words[t-14,], words[t-16,])
             )
-        
+            words[t, ] = circ_left_shift_arr(xored, 1)
+
         A, B, C, D, E = H0, H1, H2, H3, H4
 
         for t in range(80):
-            match t:
-                case if 0 <= t <= 19:
-                    func = (B and C) or ((not B) and D)
-                    K = b"\x5A\x82\x79\x99"
-                case if 20 <= t <= 39:
-                    func = B ^ C ^ D
-                    K = b"\x6E\xD9\xEB\xA1"
-                case if 40 <= t <= 59:
-                    func = (B and C) or (B and D) or (C and D)
-                    K = b"\x8F\x1B\xBC\xDC"
-                case if 60 <= t <= 79:
-                    func = B ^ C ^ D
-                    K = b"\xCA\x62\xC1\xD6"
+            K = K_map[t]
+            func = func_map[t]
+            temp = circ_left_shift_arr(A, 5) + func + E + words[t,] + K
+            E = D
+            D = C
+            C = circ_left_shift_arr(B, 30)
+            B = A
+            A = temp
 
-            temp = circ_left_shit(A, 5) + func + E + words[t] + K[t]
 
     return None
 
@@ -177,6 +250,6 @@ def main_hmac(key: bytes = None, data: bytes = None) -> bytes:
 
 
 if __name__ == '__main__':
-    test_hex = b"\x61\x62\x63\x64\x65"
-    msg = main_sha1(test_hex)
-    print(msg)
+    test_hex = b"denisdflasdfjasdl;f"
+    res = main_sha1(test_hex)
+    print(type(res))
