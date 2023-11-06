@@ -14,6 +14,15 @@ def bytes_xor(string: bytes, pad: int) -> bytes:
     )
 
 
+def main_sha1():
+    '''
+    SHA1. RFC 3174. Max input size: < 2^64 bites. Output - 160 bit (digest).
+    A word is 32-bit string or 8 hex digits.
+
+    '''
+    pass
+
+
 def main_hmac(key: bytes = None, data: bytes = None) -> bytes:
     B = 64  # byte length of hash input
     L = 20  # byte lenght of hash output
@@ -46,16 +55,8 @@ def main_hmac(key: bytes = None, data: bytes = None) -> bytes:
     return hash_func(final_string).digest()
 
 
-
-
-
-
-
-
-
-
-
-main_hmac()
+if __name__ == '__main__':
+    main_sha1()
 
 '''
 res = bytes_xor(K, ipad[0])

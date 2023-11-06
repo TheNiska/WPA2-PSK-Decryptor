@@ -79,6 +79,21 @@ def customPRF512(key, A, B):
     return R[:blen]
 
 
+def customPRF512_test(key, A, B):
+    BLEN = 64
+    end = (BLEN * 8 + 159) // 160 + 1
+    prepared_data = A + b'\x00' + B
+
+    R = b''.join([
+        main_hmac(
+            key=key,
+            data=(prepared_data + bytes([i]))
+        )
+        for i in range(end)
+    ])
+    return R[:BLEN]
+
+
 def main():
     print('Number of CPUs: ', os.cpu_count())
 
