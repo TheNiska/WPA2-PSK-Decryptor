@@ -43,9 +43,18 @@ for t in range(80):
         K_map[t] = K_60_79
 
 
-def left_rotate(n, b):
-    """Left rotate a 32-bit integer n by b bits."""
-    return ((n << b) | (n >> (32 - b))) & 0xffffffff
+def left_rotate(x, n):
+    '''
+    If X is a word and n is integer 0 <= n < 32, then func is
+        shift = (X << n) or (X >> 32 - n)
+
+    X << n: discarding left-most n bits and padding the result with
+    n zeros on the right.
+
+    X >> n: discarding the right-most n bits and padding the result with
+    n zeros on the left.
+    '''
+    return ((x << n) | (x >> (32 - n))) & 0xffffffff
 
 
 def sha1_pad(msg: bytes):
@@ -62,13 +71,9 @@ def sha1_pad(msg: bytes):
 def sha1(msg: bytes):
     msg = sha1_pad(msg)
 
-    H0 = int.from_bytes(b"\x67\x45\x23\x01")
-    H1 = int.from_bytes(b"\xEF\xCD\xAB\x89")
-    H2 = int.from_bytes(b"\x98\xBA\xDC\xFE")
-    H3 = int.from_bytes(b"\x10\x32\x54\x76")
-    H4 = int.from_bytes(b"\xC3\xD2\xE1\xF0")
+    h0, h1, h2, h3, h4 = H0, H1, H2, H3, H4
 
-    words = [int.from_bytes(msg[i*4:i*4+4]) for i in range(16)] + [b''] * 64
+    words = [int.from_bytes(msg[i*4:i*4+4]) for i in range(16)] + [0] * 64
 
     for t in range(16, 80):
         words[t] = left_rotate(
@@ -77,7 +82,7 @@ def sha1(msg: bytes):
             1
         )
 
-    A, B, C, D, E = H0, H1, H2, H3, H4
+    A, B, C, D, E = h0, h1, h2, h3, h4
 
     for t in range(80):
         A, B, C, D, E = (
@@ -89,26 +94,28 @@ def sha1(msg: bytes):
             D
         )
 
-    H0 = (H0 + A) & 0xffffffff
-    H1 = (H1 + B) & 0xffffffff
-    H2 = (H2 + C) & 0xffffffff
-    H3 = (H3 + D) & 0xffffffff
-    H4 = (H4 + E) & 0xffffffff
+    h0 = (h0 + A) & 0xffffffff
+    h1 = (h1 + B) & 0xffffffff
+    h2 = (h2 + C) & 0xffffffff
+    h3 = (h3 + D) & 0xffffffff
+    h4 = (h4 + E) & 0xffffffff
 
     res = (
-        H0.to_bytes(4)
-        + H1.to_bytes(4)
-        + H2.to_bytes(4)
-        + H3.to_bytes(4)
-        + H4.to_bytes(4)
+        h0.to_bytes(4)
+        + h1.to_bytes(4)
+        + h2.to_bytes(4)
+        + h3.to_bytes(4)
+        + h4.to_bytes(4)
     )
+
     return res
+
 
 
 if __name__ == '__main__':
     from timeit import timeit
     import hashlib
-    msg = b"alsdfasdflasdjf;lal;j;lj;;ljsdfja;lj;ljll;jlk;jl"
+    msg = b"\x61\x62\x63\x63\x65"
     res = sha1(msg)
     print(res.hex())
     print(hashlib.sha1(msg).hexdigest())

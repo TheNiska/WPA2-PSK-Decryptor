@@ -1,50 +1,44 @@
 import numpy as np
 
 
-def byte_to_bin_string(byte: int) -> str:
-    bit_str = bin(byte)[2:]
-    length = len(bit_str)
-    return bit_str if length == 8 else (8 - length) * '0' + bit_str
+def circ_left_shift_arr(arr, n):
+    length = arr.shape[0]
+    temp_arr = np.zeros((2, length), dtype=np.bool_)
+
+    temp_arr[0, :length - n] = arr[n:]  # shift left
+    temp_arr[1, 32 - n:] = arr[:length - (32 - n)]  # shift right
+
+    arr[:] = np.logical_or(temp_arr[0,], temp_arr[1,])
 
 
-def bytes_to_bits(byte_string: bytes) -> np.array:
-    bits_len = len(byte_string) * 8
-    arr = np.zeros((bits_len,), dtype=np.bool_)
-    current = 0
-    for byte in byte_string:
-        bits = byte_to_bin_string(byte)
-        bits_list = [int(ch) for ch in bits]
-        arr[current:current+8] = bits_list
-        current += 8
-    return arr
+def func(arr):
+    arr[2] = 1
+    arr[4] = 1
 
 
-s1 = b"\xff\x00" * 2
-s2 = b"\x0f\x0f" * 2
+def bin_sum(*arrays):
+    size = arrays[0].shape[0]
+    res_arr = np.zeros((size, ), dtype=np.bool_)
+    to_next = '0'
+    for i in range(size - 1, -1, -1):
+        num = sum([a[i] for a in arrays]) + int(to_next, 2)
+        bin_num = bin(num)[2:]
+
+        res_arr[i] = int(bin_num[-1])
+        to_next = '0' if len(bin_num) < 2 else bin_num[:-1]
+    return res_arr
 
 
-bin_seq1 = ' '.join([byte_to_bin_string(byte) for byte in s1])
-bin_seq2 = ' '.join([byte_to_bin_string(byte) for byte in s2])
+arr = np.zeros((10, ), dtype=np.bool_)
+print(arr)
 
-print(s1.hex(), s2.hex(), sep='\n')
-print(bin_seq1, bin_seq2, sep='\n')
+func(arr)
+print(arr)
 
-s1_num = int.from_bytes(s1)
-s2_num = int.from_bytes(s2)
+circ_left_shift_arr(arr, 1)
+print(arr)
 
-res = s1_num
-print(res.to_bytes(4))
-bits1 = bytes_to_bits(s1)
-bits2 = bytes_to_bits(s2)
+arr1 = np.array([1, 1, 1, 1], dtype=np.bool_)
+arr2 = np.array([1, 1, 1, 1], dtype=np.bool_)
 
-res = np.logical_and(bits1, bits2)
-print(''.join([str(int(el)) for el in res]))
-
-print()
-'''
-res_list = []
-for i in range(len(res) // 8):
-    res_list.append(res[i*8:i*8+8])
-print(' '.join(res_list))
-'''
-
+print(bin_sum(arr1, arr2))
