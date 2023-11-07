@@ -7,65 +7,6 @@ Cryptographic hash func. In the future must we be written from scratch
 hash_func = sha1
 # Should be replaces with custom: hash_func = lambda bytes -> hash
 
-K_0_19 = bytes_to_bits(b"\x5A\x82\x79\x99")
-K_20_39 = bytes_to_bits(b"\x6E\xD9\xEB\xA1")
-K_40_59 = bytes_to_bits(b"\x8F\x1B\xBC\xDC")
-K_60_79 = bytes_to_bits(b"\xCA\x62\xC1\xD6")
-
-H0 = bytes_to_bits(b"\x67\x45\x23\x01")
-H1 = bytes_to_bits(b"\xEF\xCD\xAB\x89")
-H2 = bytes_to_bits(b"\x98\xBA\xDC\xFE")
-H3 = bytes_to_bits(b"\x10\x32\x54\x76")
-H4 = bytes_to_bits(b"\xC3\xD2\xE1\xF0")
-
-K_map = dict()
-func_map = dict()
-
-for t in range(80):
-    if t <= 19:
-        func = np.logical_or(
-            np.logical_and(B, C),
-            np.logical_and(np.logical_not(B), D)
-        )
-
-        func_map[t] = func
-        K_map[t] = K_0_19
-
-    elif 20 <= t <= 39:
-        func = np.logical_xor(
-            np.logical_xor(B, C),
-            D
-        )
-
-        func_map[t] = func
-        K_map = K_20_39
-
-    elif 40 <= t <= 59:
-        func = np.logical_or(
-            np.logical_or(
-                np.logical_and(B, C),
-                np.logical_and(B, D)
-            ),
-            np.logical_and(C, D)
-        )
-
-        func_map[t] = func
-        K_map[t] = K_40_59
-
-    else:
-        func = np.logical_xor(
-            np.logical_xor(B, C),
-            D
-        )
-        func_map[t] = func
-        K_map[t] = K_60_79
-
-
-def bytes_xor(string: bytes, pad: int) -> bytes:
-    return b''.join(
-        [(byte ^ pad).to_bytes(1) for byte in string]
-    )
-
 
 def byte_to_bin_string(byte: int) -> str:
     bit_str = bin(byte)[2:]
@@ -83,6 +24,73 @@ def bytes_to_bits(byte_string: bytes) -> np.array:
         arr[current:current+8] = bits_list
         current += 8
     return arr
+
+
+K_0_19 = bytes_to_bits(b"\x5A\x82\x79\x99")
+K_20_39 = bytes_to_bits(b"\x6E\xD9\xEB\xA1")
+K_40_59 = bytes_to_bits(b"\x8F\x1B\xBC\xDC")
+K_60_79 = bytes_to_bits(b"\xCA\x62\xC1\xD6")
+
+H0 = bytes_to_bits(b"\x67\x45\x23\x01")
+H1 = bytes_to_bits(b"\xEF\xCD\xAB\x89")
+H2 = bytes_to_bits(b"\x98\xBA\xDC\xFE")
+H3 = bytes_to_bits(b"\x10\x32\x54\x76")
+H4 = bytes_to_bits(b"\xC3\xD2\xE1\xF0")
+
+K_map = dict()
+func_map = dict()
+
+
+for t in range(80):
+    if t <= 19:
+        def func1(B, C, D):
+            return np.logical_or(
+                np.logical_and(B, C),
+                np.logical_and(np.logical_not(B), D)
+            )
+
+        func_map[t] = func1
+        K_map[t] = K_0_19
+
+    elif 20 <= t <= 39:
+        def func2(B, C, D):
+            return np.logical_xor(
+                np.logical_xor(B, C),
+                D
+            )
+
+        func_map[t] = func2
+        K_map[t] = K_20_39
+
+    elif 40 <= t <= 59:
+        def func3(B, C, D):
+            return np.logical_or(
+                np.logical_or(
+                    np.logical_and(B, C),
+                    np.logical_and(B, D)
+                ),
+                np.logical_and(C, D)
+            )
+
+        func_map[t] = func3
+        K_map[t] = K_40_59
+
+    else:
+        def func4(B, C, D):
+            return np.logical_xor(
+                np.logical_xor(B, C),
+                D
+            )
+
+        func_map[t] = func4
+        K_map[t] = K_60_79
+
+
+def bytes_xor(string: bytes, pad: int) -> bytes:
+    return b''.join(
+        [(byte ^ pad).to_bytes(1) for byte in string]
+    )
+
 
 
 def words_sum(X, Y):
@@ -204,14 +212,23 @@ def main_sha1(msg: bytes):
         A, B, C, D, E = H0, H1, H2, H3, H4
 
         for t in range(80):
-            K = K_map[t]
-            func = func_map[t]
-            temp = circ_left_shift_arr(A, 5) + func + E + words[t,] + K
+            temp = (circ_left_shift_arr(A, 5)
+                    + func_map[t](B, C, D)
+                    + E
+                    + words[t,]
+                    + K_map[t])
+
             E = D
             D = C
             C = circ_left_shift_arr(B, 30)
             B = A
             A = temp
+
+        H0 = H0 + A
+        H1 = H1 + B
+        H2 = H2 + C
+        H3 = H3 + D
+        H4 = H4
 
 
     return None
