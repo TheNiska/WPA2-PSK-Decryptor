@@ -82,10 +82,6 @@ def sha1(msg: bytes):
             1
         )
 
-    with open("prewords_bt.txt", 'w') as f:
-        for word in words:
-            f.write(word.to_bytes(4).hex() + '\n')
-
     A, B, C, D, E = h0, h1, h2, h3, h4
 
     for t in range(80):
@@ -103,15 +99,6 @@ def sha1(msg: bytes):
         C = left_rotate(B, 30)
         B = A
         A = temp
-
-        with open("words_in_byte_sha1.txt", 'a') as f:
-            f.write(temp.to_bytes(4).hex() + '\n')
-            f.write(E.to_bytes(4).hex() + '\n')
-            f.write(D.to_bytes(4).hex() + '\n')
-            f.write(C.to_bytes(4).hex() + '\n')
-            f.write(B.to_bytes(4).hex() + '\n')
-            f.write(A.to_bytes(4).hex() + '\n')
-            f.write('\n')
 
     h0 = (h0 + A) & 0xffffffff
     h1 = (h1 + B) & 0xffffffff
@@ -132,7 +119,6 @@ def sha1(msg: bytes):
 
 
 if __name__ == '__main__':
-    from timeit import timeit
     import hashlib
     msg = b"denis"
     res = sha1(msg)
