@@ -146,8 +146,7 @@ def sha1(msg: bytes):
             np.logical_xor(w[t-3], w[t-8]),
             np.logical_xor(w[t-14], w[t-16])
         )
-        circ_left_shift_arr(xored, 1)
-        w[t,] = xored
+        w[t] = circ_left_shift_arr(xored, 1)
 
     A, B, C, D, E = h0, h1, h2, h3, h4
 
@@ -166,15 +165,6 @@ def sha1(msg: bytes):
         B = A
         A = temp
 
-        with open("words_in_np_sha1.txt", 'a') as f:
-            f.write(bitarray_to_bytes(temp).hex() + '\n')
-            f.write(bitarray_to_bytes(E).hex() + '\n')
-            f.write(bitarray_to_bytes(D).hex() + '\n')
-            f.write(bitarray_to_bytes(C).hex() + '\n')
-            f.write(bitarray_to_bytes(B).hex() + '\n')
-            f.write(bitarray_to_bytes(A).hex() + '\n')
-            f.write('\n')
-
     h0 = bin_sum(h0, A)
     h1 = bin_sum(h1, B)
     h2 = bin_sum(h2, C)
@@ -190,8 +180,6 @@ def sha1(msg: bytes):
     )
 
     return res
-
-
 
 
 if __name__ == '__main__':

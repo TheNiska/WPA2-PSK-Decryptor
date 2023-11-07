@@ -82,6 +82,10 @@ def sha1(msg: bytes):
             1
         )
 
+    with open("prewords_bt.txt", 'w') as f:
+        for word in words:
+            f.write(word.to_bytes(4).hex() + '\n')
+
     A, B, C, D, E = h0, h1, h2, h3, h4
 
     for t in range(80):
