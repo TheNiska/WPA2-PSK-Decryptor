@@ -85,14 +85,29 @@ def sha1(msg: bytes):
     A, B, C, D, E = h0, h1, h2, h3, h4
 
     for t in range(80):
-        A, B, C, D, E = (
-            (left_rotate(A, 5) + func_map[t](B, C, D) + E + words[t] + K_map[t])
-            & 0xffffffff,
-            A,
-            left_rotate(B, 30),
-            C,
-            D
-        )
+        temp = (
+            left_rotate(A, 5)
+            + func_map[t](B, C, D)
+            + E
+            + words[t]
+            + K_map[t]
+        ) & 0xffffffff
+
+
+        E = D
+        D = C
+        C = left_rotate(B, 30)
+        B = A
+        A = temp
+
+        with open("words_in_byte_sha1.txt", 'a') as f:
+            f.write(temp.to_bytes(4).hex() + '\n')
+            f.write(E.to_bytes(4).hex() + '\n')
+            f.write(D.to_bytes(4).hex() + '\n')
+            f.write(C.to_bytes(4).hex() + '\n')
+            f.write(B.to_bytes(4).hex() + '\n')
+            f.write(A.to_bytes(4).hex() + '\n')
+            f.write('\n')
 
     h0 = (h0 + A) & 0xffffffff
     h1 = (h1 + B) & 0xffffffff
@@ -115,11 +130,7 @@ def sha1(msg: bytes):
 if __name__ == '__main__':
     from timeit import timeit
     import hashlib
-    msg = b"\x61\x62\x63\x63\x65"
+    msg = b"denis"
     res = sha1(msg)
     print(res.hex())
     print(hashlib.sha1(msg).hexdigest())
-
-    my_time = timeit(stmt="sha1(msg)", globals=globals(), number=1000)
-    std_time = timeit(stmt="hashlib.sha1(msg)", globals=globals(), number=1000)
-    print(my_time, std_time)

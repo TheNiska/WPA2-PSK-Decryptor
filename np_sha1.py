@@ -45,8 +45,7 @@ def circ_left_shift_arr(arr, n):
     temp_arr[0, :length - n] = arr[n:]  # shift left
     temp_arr[1, 32 - n:] = arr[:length - (32 - n)]  # shift right
 
-    arr[:] = np.logical_or(temp_arr[0,], temp_arr[1,])
-    return arr
+    return np.logical_or(temp_arr[0,], temp_arr[1,])
 
 
 def bin_sum(*arrays):
@@ -148,24 +147,33 @@ def sha1(msg: bytes):
             np.logical_xor(w[t-14], w[t-16])
         )
         circ_left_shift_arr(xored, 1)
-        w[t] = xored
+        w[t,] = xored
 
     A, B, C, D, E = h0, h1, h2, h3, h4
 
     for t in range(80):
-        A, B, C, D, E = (
-            bin_sum(
-                circ_left_shift_arr(A, 5),
-                func_map[t](B, C, D),
-                E,
-                w[t],
-                K_map[t]
-            ),
-            A,
-            circ_left_shift_arr(B, 30),
-            C,
-            D
+        temp = bin_sum(
+            circ_left_shift_arr(A, 5),
+            func_map[t](B, C, D),
+            E,
+            w[t,],
+            K_map[t]
         )
+
+        E = D
+        D = C
+        C = circ_left_shift_arr(B, 30)
+        B = A
+        A = temp
+
+        with open("words_in_np_sha1.txt", 'a') as f:
+            f.write(bitarray_to_bytes(temp).hex() + '\n')
+            f.write(bitarray_to_bytes(E).hex() + '\n')
+            f.write(bitarray_to_bytes(D).hex() + '\n')
+            f.write(bitarray_to_bytes(C).hex() + '\n')
+            f.write(bitarray_to_bytes(B).hex() + '\n')
+            f.write(bitarray_to_bytes(A).hex() + '\n')
+            f.write('\n')
 
     h0 = bin_sum(h0, A)
     h1 = bin_sum(h1, B)
@@ -174,11 +182,11 @@ def sha1(msg: bytes):
     h4 = bin_sum(h4, E)
 
     res = (
-        bitarray_to_bytes(H0).hex() +
-        bitarray_to_bytes(H1).hex() +
-        bitarray_to_bytes(H2).hex() +
-        bitarray_to_bytes(H3).hex() +
-        bitarray_to_bytes(H4).hex()
+        bitarray_to_bytes(h0) +
+        bitarray_to_bytes(h1) +
+        bitarray_to_bytes(h2) +
+        bitarray_to_bytes(h3) +
+        bitarray_to_bytes(h4)
     )
 
     return res
@@ -187,5 +195,5 @@ def sha1(msg: bytes):
 
 
 if __name__ == '__main__':
-    res = sha1(b"\x61\x62\x63\x64\x65")
-    print(res)
+    res = sha1(b"denis")
+    print(res.hex())
