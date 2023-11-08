@@ -1,24 +1,18 @@
 import numpy as np
 
 
-def byte_to_bin_string(byte: int) -> str:
-    bit_str = bin(byte)[2:]
-    length = len(bit_str)
-    return bit_str if length == 8 else (8 - length) * '0' + bit_str
-
-
 def bytes_to_bits(byte_string: bytes, size=None) -> np.array:
-    bits_len = len(byte_string) * 8 if not size else size
+    initial_size = len(byte_string) * 8
+    size = initial_size if not size else size
 
-    arr = np.zeros((bits_len,), dtype=np.bool_)
+    result_array = np.zeros((size, ), dtype=np.bool_)
 
-    current = 0
-    for byte in byte_string:
-        bits = byte_to_bin_string(byte)
-        bits_list = [int(ch) for ch in bits]
-        arr[current:current+8] = bits_list
-        current += 8
-    return arr
+    bits_array = np.unpackbits(
+        np.frombuffer(byte_string, dtype=np.uint8)
+    ).astype(np.bool_)
+
+    result_array[:initial_size] = bits_array
+    return result_array
 
 
 def bitarray_to_bytes(arr: np.array) -> bytes:
@@ -51,13 +45,10 @@ def circ_left_shift_arr(arr, n):
 def bin_sum(*arrays):
     size = arrays[0].shape[0]
     res_arr = np.zeros((size, ), dtype=np.bool_)
-    to_next = '0'
+    to_next = 0
     for i in range(size - 1, -1, -1):
-        num = sum([a[i] for a in arrays]) + int(to_next, 2)
-        bin_num = bin(num)[2:]
-
-        res_arr[i] = int(bin_num[-1])
-        to_next = '0' if len(bin_num) < 2 else bin_num[:-1]
+        num = sum([a[i] for a in arrays]) + to_next
+        res_arr[i], to_next = num & 1, num >> 1
     return res_arr
 
 
@@ -183,5 +174,10 @@ def sha1(msg: bytes):
 
 
 if __name__ == '__main__':
-    res = sha1(b"denis")
-    print(res.hex())
+    from timeit import timeit
+    from hashlib import sha1 as lib_sha1
+
+    msg = "denis74HdlasH4898is74Hd".encode()
+    hx = sha1(msg).hex()
+    hx_std = lib_sha1(msg).hexdigest()
+    print(hx, hx_std, sep='\n')

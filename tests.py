@@ -1,4 +1,6 @@
 import numpy as np
+from timeit import timeit
+
 
 def byte_to_bin_string(byte: int) -> str:
     bit_str = bin(byte)[2:]
@@ -20,93 +22,28 @@ def bytes_to_bits(byte_string: bytes, size=None) -> np.array:
     return arr
 
 
-def bitarray_to_bytes(arr: np.array) -> bytes:
-    bit_list = ''.join([str(int(x)) for x in arr])
-    bytes_length = len(bit_list) // 8
-    result = b''.join([
-        int(bit_list[i*8:i*8+8], 2).to_bytes(1) for i in range(bytes_length)
-    ])
-    return result
+def bytes_to_bits_opt(byte_string: bytes, size=None) -> np.array:
+    initial_size = len(byte_string) * 8
+    size = initial_size if not size else size
 
+    result_array = np.zeros((size, ), dtype=np.bool_)
 
-def bitstring_to_bytes(s: str) -> bytes:
-    bytes_length = len(s) // 8
-    result = b''.join([
-        int(s[i*8:i*8+8], 2).to_bytes(1) for i in range(bytes_length)
-    ])
-    return result
+    bits_array = np.unpackbits(
+        np.frombuffer(byte_string, dtype=np.uint8)
+    ).astype(np.bool_)
 
-
-def circ_left_shift_arr(arr, n):
-    length = arr.shape[0]
-    temp_arr = np.zeros((2, length), dtype=np.bool_)
-
-    temp_arr[0, :length - n] = arr[n:]  # shift left
-    temp_arr[1, 32 - n:] = arr[:length - (32 - n)]  # shift right
-
-    arr[:] = np.logical_or(temp_arr[0,], temp_arr[1,])
-
-
-def func(arr):
-    arr[2] = 1
-    arr[4] = 1
-
-
-def bin_sum(*arrays):
-    size = arrays[0].shape[0]
-    res_arr = np.zeros((size, ), dtype=np.bool_)
-    to_next = '0'
-    for i in range(size - 1, -1, -1):
-        num = sum([a[i] for a in arrays]) + int(to_next, 2)
-        bin_num = bin(num)[2:]
-
-        res_arr[i] = int(bin_num[-1])
-        to_next = '0' if len(bin_num) < 2 else bin_num[:-1]
-    print()
-    return res_arr
-
-
-arr = np.zeros((10, ), dtype=np.bool_)
-print(arr)
-
-func(arr)
-print(arr)
-
-circ_left_shift_arr(arr, 1)
-print(arr)
+    result_array[:initial_size] = bits_array
+    return result_array
 
 
 # 32 bits
-x1 = b"\x61\x62\x63\x64"
+x1 = b"\x61\x62\x63\x64\x67\x45\x23\x01\x67\x45\x23\x01\xff\xaa\xb1"
 x2 = b"\x67\x45\x23\x01"
-x3 = b"\xEF\xCD\xAB\x89"
-x4 = b"\xEF\xCD\xAB\x89"
 
-x1_num, x2_num, x3_num, x4_num = (
-    int.from_bytes(x1),
-    int.from_bytes(x2),
-    int.from_bytes(x3),
-    int.from_bytes(x4)
-)
-sm = sum([x1_num, x2_num, x3_num, x4_num])
-print(sm & 0xffffffff)
+t1 = bytes_to_bits(x1)
+t2 = bytes_to_bits_opt(x1)
+assert np.array_equal(t1, t2)
 
-x1_bits, x2_bits, x3_bits, x4_bits = (
-    bytes_to_bits(x1),
-    bytes_to_bits(x2),
-    bytes_to_bits(x3),
-    bytes_to_bits(x4),
-)
-
-arr_lst = [
-    x1_bits.astype(int), x2_bits.astype(int),
-    x3_bits.astype(int), x4_bits.astype(int)
-]
-
-pprint_str = '\n'.join([''.join(str(arr)) for arr in arr_lst])
-print(pprint_str, '\n')
-
-sum_arr = bin_sum(*arr_lst)
-sum_bytes = bitarray_to_bytes(sum_arr)
-sum_number = int.from_bytes(sum_bytes)
-print(sum_number)
+t1 = timeit(stmt="bytes_to_bits(x1)", globals=globals(), number=10000)
+t2 = timeit(stmt="bytes_to_bits_opt(x1)", globals=globals(), number=10000)
+print(t1, t2, sep='\n')
