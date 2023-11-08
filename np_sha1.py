@@ -16,20 +16,7 @@ def bytes_to_bits(byte_string: bytes, size=None) -> np.array:
 
 
 def bitarray_to_bytes(arr: np.array) -> bytes:
-    bit_list = ''.join([str(int(x)) for x in arr])
-    bytes_length = len(bit_list) // 8
-    result = b''.join([
-        int(bit_list[i*8:i*8+8], 2).to_bytes(1) for i in range(bytes_length)
-    ])
-    return result
-
-
-def bitstring_to_bytes(s: str) -> bytes:
-    bytes_length = len(s) // 8
-    result = b''.join([
-        int(s[i*8:i*8+8], 2).to_bytes(1) for i in range(bytes_length)
-    ])
-    return result
+    return np.packbits(arr).tobytes()
 
 
 def circ_left_shift_arr(arr, n):
@@ -177,7 +164,11 @@ if __name__ == '__main__':
     from timeit import timeit
     from hashlib import sha1 as lib_sha1
 
-    msg = "denis74HdlasH4898is74Hd".encode()
+    msg = "denis74HdlasH4s74Hd".encode()
     hx = sha1(msg).hex()
     hx_std = lib_sha1(msg).hexdigest()
-    print(hx, hx_std, sep='\n')
+    
+    t1 = timeit(stmt="sha1(msg)", globals=globals(), number=100)
+    t2 = timeit(stmt="lib_sha1(msg)", globals=globals(), number=100)
+
+    print(t1, t2)

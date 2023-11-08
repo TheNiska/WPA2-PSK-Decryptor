@@ -42,6 +42,8 @@ x2 = b"\x67\x45\x23\x01"
 
 t1 = bytes_to_bits(x1)
 t2 = bytes_to_bits_opt(x1)
+
+print(np.packbits(t1).tobytes().hex())
 assert np.array_equal(t1, t2)
 
 t1 = timeit(stmt="bytes_to_bits(x1)", globals=globals(), number=10000)
